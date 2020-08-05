@@ -14,7 +14,7 @@ $table_name = $wpdb->prefix . 'covid_counter_movements';
 $movement_types = array( 'entry', 'exit' );
 
 register_activation_hook( __FILE__, function() use ( $wpdb, $table_name, $movement_types ) {
-	$movement_types_string = implode( ', ', $movement_types );
+	$movement_types_string = "'" . implode( "', '", $movement_types ) . "'";
 	$charset_collate = $wpdb->get_charset_collate();
 
 	dbDelta( "
