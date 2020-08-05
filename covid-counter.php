@@ -7,54 +7,72 @@
  */
 
 require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+require_once( plugin_dir_path( __FILE__ ) . 'constants.php' );
+require_once( plugin_dir_path( __FILE__ ) . 'functions/create_enum_string.php' );
+require_once( plugin_dir_path( __FILE__ ) . 'functions/validate_location.php' );
+require_once( plugin_dir_path( __FILE__ ) . 'functions/validate_type.php' );
 
 global $wpdb;
 
 $table_name = $wpdb->prefix . 'covid_counter_movements';
-$movement_types = array( 'entry', 'exit' );
 
-register_activation_hook( __FILE__, function() use ( $wpdb, $table_name, $movement_types ) {
-	$movement_types_string = "'" . implode( "', '", $movement_types ) . "'";
+register_activation_hook( __FILE__, function() use ( $wpdb, $table_name, $locations, $types ) {
+	$locations_string = create_enum_string( $locations );
+	$types_string = create_enum_string( $types );
 	$charset_collate = $wpdb->get_charset_collate();
 
 	dbDelta( "
 		CREATE TABLE $table_name (
 			id INT AUTO_INCREMENT,
-			type ENUM($movement_types_string),
+			location ENUM($locations_string),
+			type ENUM($types_string),
 			occurred_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (id)
 		) $charset_collate;
 	" );
 } );
 
-add_action( 'rest_api_init', function() use ( $wpdb, $table_name, $movement_types ) {
+add_action( 'rest_api_init', function() use ( $wpdb, $table_name ) {
 	$namespace = 'covid-counter';
 
-	register_rest_route( $namespace, '/count', array(
+	register_rest_route( $namespace, '/counts', array(
 		'methods'  => 'GET',
-		'callback' => function() use ( $wpdb, $table_name ) {
+		'callback' => function( WP_REST_Request $request ) use ( $wpdb, $table_name ) {
+			$location = $request['location'];
+
 			return array( 'count' => (int) $wpdb->get_var( "
-				SELECT SUM(
-					CASE
-						WHEN type = 'entry' THEN 1
-						WHEN type = 'exit' THEN -1
-					END
-				) FROM $table_name
+				SELECT SUM(CASE WHEN type = 'entry' THEN 1 WHEN type = 'exit' THEN -1 END)
+				FROM $table_name
+				WHERE location = '$location'
 			" ) ?? 0 );
 		},
+		'args' => array(
+			'location' => array(
+				'required'          => true,
+				'validate_callback' => 'validate_location',
+			),
+		),
 	) );
-	register_rest_route( $namespace, '/movement', array(
+	register_rest_route( $namespace, '/movements', array(
 		'methods'  => 'POST',
-		'callback' => function( WP_REST_Request $request ) use ( $wpdb, $table_name, $movement_types ) {
-			$type = $request->get_json_params()['type'];
+		'callback' => function( WP_REST_Request $request ) use ( $wpdb, $table_name ) {
+			$wpdb->insert( $table_name, array(
+				'location' => $request['location'],
+				'type'     => $request['type'],
+			) );
 
-			if ( in_array( $type, $movement_types ) ) {
-				$wpdb->insert( $table_name, array( 'type' => $type ) );
-				return new WP_REST_Response( null, 201 );
-			} else {
-				return new WP_Error( 'invalid_type', 'Invalid type', array( 'status' => 400 ) );
-			}
-		}
+			return new WP_REST_Response( null, 201 );
+		},
+		'args' => array(
+			'location' => array(
+				'required'          => true,
+				'validate_callback' => 'validate_location',
+			),
+			'type' => array(
+				'required'          => true,
+				'validate_callback' => 'validate_type',
+			),
+		),
 	) );
 } );
 ?>
