@@ -38,17 +38,35 @@ add_action( 'rest_api_init', function() use ( $wpdb, $table_name ) {
 	register_rest_route( $namespace, '/counts', array(
 		'methods'  => 'GET',
 		'callback' => function( WP_REST_Request $request ) use ( $wpdb, $table_name ) {
-			$location = $request['location'];
+			$counts = $wpdb->get_results( "
+				SELECT location, SUM(CASE WHEN type = 'entry' THEN 1 WHEN type = 'exit' THEN -1 END) AS count
+				FROM $table_name
+				GROUP BY location
+			" );
 
-			return array( 'count' => (int) $wpdb->get_var( "
-				SELECT SUM(CASE WHEN type = 'entry' THEN 1 WHEN type = 'exit' THEN -1 END)
+			foreach ( $counts as $count ) {
+				$count->count = (int) $count->count;
+			}
+
+			return $counts;
+		},
+	) );
+	register_rest_route( $namespace, '/counts/(?P<location>[a-z]+)', array(
+		'methods' => 'GET',
+		'callback' => function( WP_REST_Request $request ) use ( $wpdb, $table_name ) {
+			$location = $request['location'];
+			$count = $wpdb->get_row( "
+				SELECT SUM(CASE WHEN type = 'entry' THEN 1 WHEN type = 'exit' THEN -1 END) AS count
 				FROM $table_name
 				WHERE location = '$location'
-			" ) ?? 0 );
+			" );
+
+			$count->count = (int) $count->count;
+
+			return $count;
 		},
 		'args' => array(
 			'location' => array(
-				'required'          => true,
 				'validate_callback' => 'validate_location',
 			),
 		),
