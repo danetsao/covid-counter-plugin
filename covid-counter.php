@@ -30,6 +30,13 @@ register_activation_hook( __FILE__, function() use ( $wpdb, $table_name, $locati
 			PRIMARY KEY (id)
 		) $charset_collate;
 	" );
+
+	get_role( 'administrator' )->add_cap( 'create_covid_counter_movements', true );
+
+	add_role( 'covid_counter', 'Covid Counter', array(
+		'read' => true,
+		'create_covid_counter_movements' => true,
+	) );
 } );
 
 add_action( 'rest_api_init', function() use ( $wpdb, $table_name ) {
@@ -91,6 +98,9 @@ add_action( 'rest_api_init', function() use ( $wpdb, $table_name ) {
 				'validate_callback' => 'validate_type',
 			),
 		),
+		'permission_callback' => function() {
+			return current_user_can( 'create_covid_counter_movements' );
+		},
 	) );
 } );
 ?>
