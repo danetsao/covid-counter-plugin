@@ -1,4 +1,4 @@
 <?php
-$locations = array( 'bruno', 'gorgas', 'hoole', 'mclure', 'rodgers' );
+$locations = array( 'bruno', 'gorgas', 'mclure', 'rodgers' );
 $types = array( 'entry', 'exit' );
 ?>
