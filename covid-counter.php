@@ -39,7 +39,7 @@ register_activation_hook( __FILE__, function() use ( $wpdb, $table_name, $locati
 	) );
 } );
 
-add_action( 'rest_api_init', function() use ( $wpdb, $table_name ) {
+add_action( 'rest_api_init', function() use ( $locations, $wpdb, $table_name ) {
 	$namespace = 'covid-counter';
 
 	register_rest_route( $namespace, '/counts', array(
@@ -77,6 +77,12 @@ add_action( 'rest_api_init', function() use ( $wpdb, $table_name ) {
 				'validate_callback' => 'validate_location',
 			),
 		),
+	) );
+	register_rest_route( $namespace, '/locations', array(
+		'methods'  => 'GET',
+		'callback' => function() use ( $locations ) {
+			return $locations;
+		},
 	) );
 	register_rest_route( $namespace, '/movements', array(
 		'methods'  => 'POST',
