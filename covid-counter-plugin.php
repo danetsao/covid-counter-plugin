@@ -39,9 +39,9 @@ register_activation_hook( __FILE__, function() use ( $wpdb, $table_name, $locati
 	) );
 } );
 
-add_action( 'rest_api_init', function() use ( $locations, $wpdb, $table_name ) {
-	$namespace = 'covid-counter';
+$namespace = 'covid-counter';
 
+add_action( 'rest_api_init', function() use ( $namespace, $locations, $wpdb, $table_name ) {
 	register_rest_route( $namespace, '/counts', array(
 		'methods'  => 'GET',
 		'callback' => function( WP_REST_Request $request ) use ( $wpdb, $table_name ) {
@@ -108,5 +108,38 @@ add_action( 'rest_api_init', function() use ( $locations, $wpdb, $table_name ) {
 			return current_user_can( 'create_covid_counter_movements' );
 		},
 	) );
+	register_rest_route( $namespace, '/analytics', array(
+		'methods'  => 'GET',
+		'callback' => function() use ( $wpdb, $table_name ) {
+			return $wpdb->get_results("
+				SELECT MONTH(occurred_at) AS month, DAY(occurred_at) AS day, HOUR(occurred_at) AS hour, location, COUNT(id) AS number_of_entries
+				FROM wp_covid_counter_movements
+				GROUP BY month, day, hour, location
+				ORDER BY month, day, hour, location
+			");
+		},
+	) );
+} );
+
+$menu_slug = 'covid-counter-analytics';
+
+add_action( 'admin_menu', function() use ( $menu_slug ) {
+	add_menu_page( 'COVID Counter Analytics', 'COVID Counter Analytics', 'manage_options', $menu_slug, function() {
+		?>
+		<button id="covid-counter-analytics-download-csv-button">Download CSV</button>
+		<?php
+	} );
+} );
+
+add_action( 'admin_enqueue_scripts', function( $hook_suffix ) use ( $menu_slug, $namespace ) {
+	if ( $hook_suffix === 'toplevel_page_' . $menu_slug ) {
+		wp_enqueue_style( 'covid_counter_analytics_style', plugins_url( 'analytics.css', __FILE__ ) );
+
+		$script_handle = 'covid_counter_analytics_script';
+
+		wp_register_script( $script_handle, plugins_url( 'analytics.js', __FILE__ ), array(), null, true );
+		wp_localize_script( $script_handle, 'covidCounterAnalytics', array( 'covidCounterApiBaseUrl' => rest_url() . $namespace ) );
+		wp_enqueue_script( $script_handle );
+	}
 } );
 ?>
