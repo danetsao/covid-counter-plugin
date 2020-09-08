@@ -17,7 +17,9 @@ global $wpdb;
 $table_name = $wpdb->prefix . 'covid_counter_movements';
 
 register_activation_hook( __FILE__, function() use ( $wpdb, $table_name, $locations, $types ) {
-	$locations_string = create_enum_string( $locations );
+	$locations_string = create_enum_string( array_map( function( $location ) {
+		return $location['name'];
+	}, $locations ) );
 	$types_string = create_enum_string( $types );
 	$charset_collate = $wpdb->get_charset_collate();
 
