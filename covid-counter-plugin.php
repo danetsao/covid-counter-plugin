@@ -126,7 +126,7 @@ add_action( 'rest_api_init', function() use ( $namespace, $locations, $wpdb, $ta
 $menu_slug = 'covid-counter-analytics';
 
 add_action( 'admin_menu', function() use ( $menu_slug ) {
-	add_menu_page( 'COVID Counter Analytics', 'COVID Counter Analytics', 'manage_options', $menu_slug, function() {
+	add_menu_page( 'COVID Counter Analytics', 'COVID Counter Analytics', 'read', $menu_slug, function() {
 		?>
 		<button id="covid-counter-analytics-download-csv-button">Download CSV</button>
 		<?php
