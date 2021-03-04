@@ -114,8 +114,17 @@ add_action( 'rest_api_init', function() use ( $namespace, $locations, $wpdb, $ta
 		'methods'  => 'GET',
 		'callback' => function() use ( $wpdb, $table_name ) {
 			return $wpdb->get_results("
+				WITH RECURSIVE cte AS (
+					SELECT MIN(occurred_at) AS occurred_at
+					FROM wp_covid_counter_movements
+					UNION ALL
+					SELECT occurred_at + INTERVAL 1 HOUR
+					FROM cte
+					WHERE DATE(occurred_at) <= (SELECT DATE(MAX(occurred_at)) FROM wp_covid_counter_movements) AND HOUR(occurred_at) < (SELECT HOUR(MAX(occurred_at)) FROM wp_covid_counter_movements)
+				)
 				SELECT MONTH(occurred_at) AS month, DAY(occurred_at) AS day, HOUR(occurred_at) AS hour, location, COUNT(id) AS number_of_entries
-				FROM wp_covid_counter_movements
+				FROM cte
+				JOIN wp_covid_counter_movements ON DATE(cte.occurred_at) = DATE(wp_covid_counter_movements.occurred_at) AND HOUR(cte.occurred_at) = HOUR(wp_covid_counter_movements.occured_at)
 				GROUP BY month, day, hour, location
 				ORDER BY month, day, hour, location
 			");
