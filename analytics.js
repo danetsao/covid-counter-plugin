@@ -1,5 +1,6 @@
 document.getElementById('covid-counter-analytics-download-csv-button').addEventListener('click', () => {
-	fetch(`${covidCounterAnalytics.covidCounterApiBaseUrl}/analytics`)
+	const modifiedURL = 'http://localhost/sites/wordpress/index.php/wp-json/covid-counter';
+	fetch(`${modifiedURL}/analytics`)
 		.then(response => response.json())
 		.then(analytics => {
 			let csv = 'month,day,hour,location,number_of_entries\n'
